@@ -74,16 +74,6 @@ const workerConfig: WorkerConfig = {
       headers: { 'User-Agent': 'BankConnector-Status (UptimeFlare)' },
     },
     {
-      // TEMPORARY — proves the outage email end to end; in no group, so never on the page or feed.
-      id: 'alert_test',
-      name: 'Alert test (ignore this)',
-      method: 'GET',
-      target: 'https://bankconnector.com/alert-test-does-not-exist',
-      expectedCodes: [404],
-      timeout: 10000,
-      headers: { 'User-Agent': 'BankConnector-Status (UptimeFlare)' },
-    },
-    {
       id: 'marketing_site',
       name: 'Marketing site (bankconnector.com)',
       method: 'GET',
