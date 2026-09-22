@@ -20,7 +20,7 @@ credentials: every key lives in GitHub and Cloudflare secrets. It is not open fo
 | `uptime.config.ts` | Our checks, page title, and the outage email via `callbacks` |
 | `bankconnector/alerts.ts` | The email: grace period + maintenance skip, sent through Brevo's API |
 | `bankconnector/feed.ts`, `pages/api/status.ts` | The public feed `/api/status` (current state, 90-day uptime, incidents, maintenance) |
-| `deploy.tf`, `.github/workflows/deploy.yml` | Project name `bankconnector-status`; the Brevo key bound as a Worker secret; deploy refuses without it; our tests run first |
+| `deploy.tf`, `.github/workflows/deploy.yml` | Project name `bankconnector-status`; the Brevo key bound as a Worker secret; deploy refuses without it; our tests run first; upstream's KV→D1 migration step omitted (this install started on D1) |
 | `.eslintrc.json`, `tsconfig.json` | `pages/api/status.ts` exempted like upstream's `data.ts` (server-side only); tests excluded from the Next build |
 | removed `sync.yaml`, `issue_translate.yml`, `FUNDING.yml` | No one-click upstream sync: upstream code is reviewed before it lands here |
 | `README.md` | This file; upstream's README moved to `upstream/` |

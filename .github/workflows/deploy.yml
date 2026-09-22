@@ -84,13 +84,9 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ steps.fetch_account_id.outputs.account_id }}
 
-      - name: Migrate state from KV (if needed)
-        run: |
-          python3 deploy/migrate_kv.py
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ steps.fetch_account_id.outputs.account_id }}
-          D1_ID: ${{ env.D1_ID }}
+      # Upstream's "Migrate state from KV" step is omitted: it upgrades pre-2026 installs that kept state in
+      # Workers KV. This install started on D1, and the step's KV listing would need a KV permission the deploy
+      # token deliberately does not carry.
 
       - name: Deploy using Terraform
         # As we don't save terraform state somewhere, we need to import the existing resources
