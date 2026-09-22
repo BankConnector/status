@@ -22,6 +22,7 @@
     {
       "files": [
         "pages/api/data.ts",
+        "pages/api/status.ts",
         "middleware.ts"
       ],
       "rules": {

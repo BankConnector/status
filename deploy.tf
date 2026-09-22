@@ -16,6 +16,13 @@ variable "CLOUDFLARE_ACCOUNT_ID" {
   type = string
 }
 
+# The outage email's Brevo key (bankconnector/alerts.ts). Bound as a Worker SECRET, never written to a file;
+# the deploy workflow passes it from the GitHub Actions secret BREVO_API_KEY and refuses to run without it.
+variable "BREVO_API_KEY" {
+  type      = string
+  sensitive = true
+}
+
 variable "enable_do_migration" {
   type    = bool
   default = false
@@ -59,6 +66,10 @@ resource "cloudflare_workers_script" "uptimeflare_worker" {
     name = "UPTIMEFLARE_D1"
     type = "d1"
     id   = cloudflare_d1_database.uptimeflare_d1.id
+    }, {
+    name = "BREVO_API_KEY"
+    type = "secret_text"
+    text = var.BREVO_API_KEY
   }]
 }
 
@@ -72,7 +83,7 @@ resource "cloudflare_workers_cron_trigger" "uptimeflare_worker_cron" {
 
 resource "cloudflare_pages_project" "uptimeflare" {
   account_id        = var.CLOUDFLARE_ACCOUNT_ID
-  name              = "uptimeflare"
+  name              = "bankconnector-status"
   production_branch = "main"
 
   deployment_configs = {

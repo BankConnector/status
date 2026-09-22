@@ -5,11 +5,27 @@ on:
     branches: ['main']
   workflow_dispatch:
 
+# Two deploys at once would both import and apply against the same Cloudflare resources.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
+      # The outage email cannot work without this key, and a Worker that silently cannot alert looks exactly
+      # like a quiet night. Refuse to deploy rather than ship one.
+      - name: Require the alert secret
+        run: |
+          if [[ -z "${BREVO_API_KEY}" ]]; then
+            echo "BREVO_API_KEY secret is not set — refusing to deploy a checker that cannot email ops@."
+            exit 1
+          fi
+        env:
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2.0.3
@@ -21,6 +37,9 @@ jobs:
         with:
           node-version: 22.x
           cache: 'npm'
+
+      - name: Test BankConnector alert and feed logic
+        run: node --experimental-strip-types --test bankconnector/*.test.ts
 
       # Automatically get an account id via the API Token
       # if secrets.CLOUDFLARE_ACCOUNT_ID is not set.
@@ -92,18 +111,19 @@ jobs:
           terraform import cloudflare_d1_database.uptimeflare_d1 "$TF_VAR_CLOUDFLARE_ACCOUNT_ID/$D1_ID"
           terraform import cloudflare_workers_script.uptimeflare_worker "$TF_VAR_CLOUDFLARE_ACCOUNT_ID/uptimeflare_worker" || echo "WARNING: Worker script import failed, continuing..."
           terraform import cloudflare_workers_cron_trigger.uptimeflare_worker_cron "$TF_VAR_CLOUDFLARE_ACCOUNT_ID/uptimeflare_worker" || echo "WARNING: Cron trigger import failed, continuing..."
-          terraform import cloudflare_pages_project.uptimeflare "$TF_VAR_CLOUDFLARE_ACCOUNT_ID/uptimeflare" || echo "WARNING: Pages project import failed, continuing..."
+          terraform import cloudflare_pages_project.uptimeflare "$TF_VAR_CLOUDFLARE_ACCOUNT_ID/bankconnector-status" || echo "WARNING: Pages project import failed, continuing..."
 
           terraform apply -auto-approve -input=false
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TF_VAR_CLOUDFLARE_ACCOUNT_ID: ${{ steps.fetch_account_id.outputs.account_id }}
+          TF_VAR_BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
           D1_ID: ${{ env.D1_ID }}
 
       # Currently Terraform Cloudflare provider doesn't support direct upload, use wrangler to upload instead.
       - name: Upload pages
         run: |
-          npx wrangler pages deploy .vercel/output/static --project-name uptimeflare
+          npx wrangler pages deploy .vercel/output/static --project-name bankconnector-status
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ steps.fetch_account_id.outputs.account_id }}
