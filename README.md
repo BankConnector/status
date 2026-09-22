@@ -1,90 +1,60 @@
-<div align="right">
-  <a title="English" href="README.md"><img src="https://img.shields.io/badge/-English-A31F34?style=for-the-badge" alt="English" /></a>
-  <a title="简体中文" href="README_zh-CN.md"><img src="https://img.shields.io/badge/-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-545759?style=for-the-badge" alt="简体中文"></a>
-</div>
+# BankConnector status checker
 
-# ✔[UptimeFlare](https://github.com/lyc8503/UptimeFlare)
+The external uptime checker behind **[bankconnector.com/status](https://bankconnector.com/status)**.
 
-A more advanced, serverless, and free uptime monitoring & status page solution, powered by Cloudflare Workers, complete with a user-friendly interface.
+Every minute, a Cloudflare Worker checks BankConnector's API, dashboard, sandbox and developer docs from
+**outside** our own servers, so it keeps reporting when they are down. It keeps 90 days of history,
+emails our operations team when a service stays down, and publishes the public feed the status page and the
+BankConnector app read.
 
-📢 **[[SECURITY ADVISORY](https://github.com/lyc8503/UptimeFlare/security/advisories/GHSA-36q9-v7p3-vj6v) 2026/03/04]** A vulnerability (CVE-2026-29779) that could expose monitor configuration and credentials in `uptime.config.ts` to clients was fixed. Versions between 2025-09-21 (from commit `41257c6`) and 2026-03-04 are affected. **Affected users are strongly advised to upgrade to the latest version.**
+Built on [UptimeFlare](https://github.com/lyc8503/UptimeFlare) by lyc8503 (Apache-2.0 — see `LICENSE`;
+upstream's own documentation is kept in `upstream/`). Thank you to its author.
 
-🎉 **[UPDATE 2026/01/03]** I have just migrated UptimeFlare from KV to D1 Database. I also updated the Terraform Cloudflare provider to v5 and improved the deployment process. The data structure has been optimized to resolve long-standing performance issues.
+This repository is public so its deploys run on GitHub Actions' free tier for public projects. It holds no
+credentials: every key lives in GitHub and Cloudflare secrets. It is not open for contributions.
 
-New users can deploy directly, while existing users can have a simple auto migration process (upgrade docs below)! Feel free to open an issue if you run into any trouble deploying.
+## What BankConnector changed from upstream
 
-## ⭐Features
+| File | Change |
+| --- | --- |
+| `uptime.config.ts` | Our checks, page title, and the outage email via `callbacks` |
+| `bankconnector/alerts.ts` | The email: grace period + maintenance skip, sent through Brevo's API |
+| `bankconnector/feed.ts`, `pages/api/status.ts` | The public feed `/api/status` (current state, 90-day uptime, incidents, maintenance) |
+| `deploy.tf`, `.github/workflows/deploy.yml` | Project name `bankconnector-status`; the Brevo key bound as a Worker secret; deploy refuses without it; our tests run first |
+| `.eslintrc.json`, `tsconfig.json` | `pages/api/status.ts` exempted like upstream's `data.ts` (server-side only); tests excluded from the Next build |
+| removed `sync.yaml`, `issue_translate.yml`, `FUNDING.yml` | No one-click upstream sync: upstream code is reviewed before it lands here |
+| `README.md` | This file; upstream's README moved to `upstream/` |
 
-- Open-source, easy to deploy (in under 10 minutes, no local tools required), and free
-- Monitoring capabilities
-  - Up to 50 checks at 1-minute intervals
-  - Geo-specific checks from over [310 cities](https://www.cloudflare.com/network/) worldwide
-  - Support for HTTP/HTTPS/TCP port monitoring
-  - Up to 90-day uptime history and uptime percentage tracking
-  - Customizable request methods, headers, and body for HTTP(s)
-  - Custom status code & keyword checks for HTTP(s)
-  - Downtime notification supporting [100+ notification channels](https://github.com/caronc/apprise/wiki)
-  - Customizable Webhook
-  - Multi-language support (English/Chinese)
-- Status page
-  - Interactive ping (response time) chart for all types of monitors
-  - Scheduled maintenances alerts & Incident history page
-  - Responsive UI that adapts to your system theme
-  - Customizable status page
-  - Use your own domain with CNAME
-  - Optional password authentication (private status page)
-  - JSON API for fetching realtime status data
+## Secrets (GitHub → Settings → Secrets and variables → Actions)
 
-## 👀Demo
+- `CLOUDFLARE_API_TOKEN` — deploys the Worker, D1 and Pages project (Workers Scripts, D1 and Pages read +
+  write, Account Settings read; no zone access).
+- `CLOUDFLARE_ACCOUNT_ID` — the Cloudflare account it deploys to.
+- `BREVO_API_KEY` — a Brevo API key used for nothing else, so it can be revoked alone. Becomes a Worker
+  secret; it is never in a file, and never in the browser bundle.
 
-My status page (Online demo): https://uptimeflare.pages.dev/
+## Announcing maintenance (SLA: at least 7 days ahead)
 
-Some screenshots:
+Add an entry to `maintenances` in `uptime.config.ts` and push to `main`; the deploy takes a few minutes and
+the entry shows as **Upcoming** on bankconnector.com/status straight away:
 
-![Desktop, Light theme](docs/desktop.png)
+```ts
+const maintenances: MaintenanceConfig[] = [
+  {
+    monitors: ['app'],                    // the services it affects: app, sandbox, docs
+    title: 'Database upgrade',
+    body: 'The API and dashboard may be unavailable for up to 15 minutes.',
+    start: '2026-10-10T06:00:00+02:00',
+    end: '2026-10-10T06:30:00+02:00',
+  },
+]
+```
 
-## ⚡Quickstart / 📄Documentation
+Outage emails for the named services are suppressed while it runs. Remove old entries once they are more
+than 90 days past — the feed stops showing them then anyway.
 
-Please refer to [Wiki](https://github.com/lyc8503/UptimeFlare/wiki)
+## Taking an upstream update
 
-## 🚀Upgrade existing deployments
-
-Get the latest features right away with [simple upgrade process](https://github.com/lyc8503/UptimeFlare/wiki/Synchronize-updates-from-upstream)
-
-## ⚙️Docs for developer
-
-To contribute new features or customize your deployment furthermore, see [here](https://github.com/lyc8503/UptimeFlare/wiki/How-to-develop).
-
-## New features (TODOs)
-
-- [x] Specify region for monitors
-- [x] TCP `opened` promise
-- [x] Use apprise to support various notification channels
-- [x] ~~Telegram example~~
-- [x] ~~[Bark](https://bark.day.app) example~~
-- [x] ~~Email notification via Cloudflare Email Workers~~
-- [x] Improve docs by providing simple examples
-- [x] Notification grace period
-- [ ] SSL certificate checks
-- [x] ~~Self-host Dockerfile~~
-- [x] Incident history
-- [x] Improve `checkLocationWorkerRoute` and fix possible `proxy failed`
-- [x] Groups
-- [x] Remove old incidents
-- [x] ~~Known issue~~: `fetch` doesn't support non-standard port (resolved after CF update)
-- [x] Compatibility date update
-- [x] Scheduled Maintenance
-- [x] Add docs for dev
-- [x] Migration to Terraform Cloudflare provider version 5.x
-- [x] Cloudflare D1 database
-- [x] Scheduled maintenances (via IIFE)
-- [x] Simpler config example
-- [x] Upcoming maintenances
-- [x] Universal Webhook upgrade
-- [x] i18n...? (maybe)
-- [ ] ICMP via proxy?
-- [x] Add default UA
-- [x] Customizable footer
-- [x] New header logo
-- [x] Improve CPU time usage
-- [x] Local deployment (docs WIP)
+`git fetch upstream && git merge upstream/main`, read the diff, run
+`node --experimental-strip-types --test bankconnector/*.test.ts` and `npx @cloudflare/next-on-pages`, then push.
+Check upstream's security advisories first: https://github.com/lyc8503/UptimeFlare/security/advisories

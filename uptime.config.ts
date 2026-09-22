@@ -1,6 +1,6 @@
 // BankConnector's status checks. The public page is bankconnector.com/status, drawn from this repo's feed
 // (`/api/status`, bankconnector/feed.ts); UptimeFlare's own page at bankconnector-status.pages.dev is the
-// unlinked fallback. How to announce maintenance: README-BANKCONNECTOR.md.
+// unlinked fallback. How to announce maintenance: README.md.
 //
 // Nothing secret belongs in this file. It is bundled into both the Worker and the Pages functions; the
 // outage email's Brevo key is a Worker secret read at send time (bankconnector/alerts.ts).
