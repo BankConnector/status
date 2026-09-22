@@ -79,7 +79,7 @@ const workerConfig: WorkerConfig = {
       name: 'Alert test (ignore this)',
       method: 'GET',
       target: 'https://bankconnector.com/alert-test-does-not-exist',
-      expectedCodes: [200],
+      expectedCodes: [404],
       timeout: 10000,
       headers: { 'User-Agent': 'BankConnector-Status (UptimeFlare)' },
     },
